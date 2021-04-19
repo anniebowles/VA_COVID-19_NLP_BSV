@@ -11,21 +11,23 @@ from .knowledge_base import target_rules
 from .knowledge_base import section_rules
 from .knowledge_base import context_rules
 from .knowledge_base import postprocess_rules
+from .knowledge_base import entity_rules
 # from .knowledge_base import *
 
 DEFAULT_PIPENAMES = [
     "preprocessor",
+    "sectionizer",
     "tagger",
     "parser",
     "concept_tagger",
     "target_matcher",
-    "sectionizer",
+    "entity_ruler",
     "context",
     "postprocessor",
-    "document_classifier"
 ]
 
 CONTEXT_MAPPING = {
+    "EXTERNAL_TEST": {"is_external": True},
     "NEGATED_EXISTENCE": {"is_negated": True},
     "FUTURE/HYPOTHETICAL": {"is_future": True},
     "HISTORICAL": {"is_historical": True},
@@ -44,11 +46,13 @@ SECTION_ATTRS = {
     "diagnoses": {"is_positive": True},
     "observation_and_plan": {"is_positive": True},
     "past_medical_history": {"is_positive": True},
-    "problem_list": {"is_positive": True},
+    "problem_list": {"is_positive": True}
 }
 
 
 def _set_attributes():
+    # covid test with a location or general outside mention attached
+    Span.set_extension("is_external", default=False, force=True)
     Span.set_extension("is_future", default=False, force=True)
     Span.set_extension("is_historical", default=False, force=True)
     Span.set_extension(
@@ -65,9 +69,9 @@ def _set_attributes():
 
 def load(model="default", enable=None, disable=None, load_rules=True, set_attributes=True):
     """Load a spaCy language object with cov_bsv pipeline components.
-    By default, the base model will be 'en_core_web_sm' with the 'tagger'
-    and 'parser' pipeline components, supplemented with the following custom
-    components:
+    By default, the base model will be 'en_core_web_sm' with the 'tagger', 'parser', and 'ner' 
+    pipeline components, supplemented with the following 
+    custom components:
         - preprocessor (set to be nlp.tokenizer): Modifies the preprocessed text and returns
             a tokenized Doc. Preprocess rules are defined in cov_bsv.knowledge_base.preprocess_rules
         - concept_tagger: Assigns a semantic tag in a custom attribute "token._.concept_tag"
@@ -78,6 +82,8 @@ def load(model="default", enable=None, disable=None, load_rules=True, set_attrib
         - sectionizer: Identifies note section headers in the text and assigns section titles to
             entities and tokens contained in that section. Section patterns are defined in
             cov_bsv.knowledge_base.section_patterns.
+        - entity_ruler: Enhances the ner component with additional entities that use 
+            the same labels as the ner. Entity ruler patterns are defined in cov_bsv.knowledge_base.entity_ruler_rules.
         - context: Identifies semantic modifiers of entities and asserts attributes such as
             positive status, negation, and other experiencier. Context rules are defined in
             cov_bsv.knowledge_base.context_rules.
@@ -88,8 +94,8 @@ def load(model="default", enable=None, disable=None, load_rules=True, set_attrib
             A document will be classified as positive if it has at least one positive, non-excluded entity.
 
     Args:
-        model: The name of the base spaCy model to load. If "default" will load the tagger and parser
-            from "en_core_web_sm".
+        model: The name of the base spaCy model to load. If "default" will load the tagger, parser, and ner
+            from "en_core_web_md".
         enable (iterable or None): A list of component names to include in the pipeline.
         If None, will include all pipeline components listed above.
         disable (iterable or None): A list of component names to exclude.
@@ -98,6 +104,7 @@ def load(model="default", enable=None, disable=None, load_rules=True, set_attrib
         set_attributes (bool): Whether or not to register custom attributes to spaCy classes. If load_rules is True,
             this will automatically be set to True because the rules in the knowledge base rely on these custom attributes.
             The following extensions are registered (all defaults are False unless specified):
+                Span._.is_external
                 Span._.is_future
                 Span._.is_historical
                 Span._.is_positive
@@ -131,8 +138,9 @@ def load(model="default", enable=None, disable=None, load_rules=True, set_attrib
         disable = set()
 
     if model == "default":
+        #model = "en_core_web_md"
         model = "en_core_web_sm"
-        disable.add("ner")
+        #disable.add("ner")
 
 
     if set_attributes:
@@ -149,6 +157,13 @@ def load(model="default", enable=None, disable=None, load_rules=True, set_attrib
             preprocessor.add(preprocess_rules)
         nlp.tokenizer = preprocessor
 
+    if "sectionizer" in enable:
+        from medspacy.section_detection import Sectionizer
+        sectionizer = Sectionizer(nlp, rules=None, add_attrs=SECTION_ATTRS)
+        if load_rules:
+            sectionizer.add(section_rules)
+        nlp.add_pipe(sectionizer, before="ner")
+    
     if "concept_tagger" in enable:
         from spacy.tokens import Token
 
@@ -159,7 +174,7 @@ def load(model="default", enable=None, disable=None, load_rules=True, set_attrib
         if load_rules:
             for (_, rules) in concept_tag_rules.items():
                 concept_tagger.add(rules)
-        nlp.add_pipe(concept_tagger)
+        nlp.add_pipe(concept_tagger, before="ner")
 
     if "target_matcher" in enable:
         from medspacy.ner import TargetMatcher
@@ -168,15 +183,16 @@ def load(model="default", enable=None, disable=None, load_rules=True, set_attrib
         if load_rules:
             for (_, rules) in target_rules.items():
                 target_matcher.add(rules)
-        nlp.add_pipe(target_matcher)
+        nlp.add_pipe(target_matcher, before="ner")
+    
+    if "entity_ruler" in enable:
+        from spacy.pipeline import EntityRuler
 
-    if "sectionizer" in enable:
-        from medspacy.section_detection import Sectionizer
-        sectionizer = Sectionizer(nlp, rules=None, add_attrs=SECTION_ATTRS)
+        ruler = EntityRuler(nlp)
         if load_rules:
-            sectionizer.add(section_rules)
-        nlp.add_pipe(sectionizer)
-
+            ruler.add_patterns(entity_rules)
+        nlp.add_pipe(ruler, before="ner")
+    
     if "context" in enable:
         from medspacy.context import ConTextComponent
 
@@ -189,7 +205,7 @@ def load(model="default", enable=None, disable=None, load_rules=True, set_attrib
         if load_rules:
             context.add(context_rules)
         nlp.add_pipe(context)
-
+    
     if "postprocessor" in enable:
         from medspacy.postprocess import Postprocessor
 

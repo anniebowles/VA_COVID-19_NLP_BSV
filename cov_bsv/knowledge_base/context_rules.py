@@ -1,7 +1,19 @@
 from medspacy.context import ConTextRule
-from . import callbacks
+from cov_bsv.knowledge_base import callbacks
 
 context_rules = [
+    # ConTextRule(
+    #         literal="covid test done at external location",
+    #         category="EXTERNAL_TEST",
+    #         direction="BACKWARD",
+    #         pattern=[
+    #             {'LOWER': "done", "OP": "?"},
+    #             {"IS_SPACE": True, "OP": "*"},
+    #             {'LOWER': "at"},
+    #             {"IS_SPACE": True, "OP": "*"},
+    #             {"_": {"concept_tag": "external_location"}}], #diagnosis
+    #         allowed_types={"COVID-19", "OTHER_CORONAVIRUS"}
+    # ),
     # "NEGATED_EXISTENCE" will be used to negate entities
     # ie., "COVID-19 not detected"
     ConTextRule(
@@ -544,13 +556,14 @@ context_rules = [
         "positive for",
         "DEFINITE_POSITIVE_EXISTENCE",
         direction="FORWARD",
-        pattern=[{"LOWER": {"IN": ["pos", "positive", "+"]}}, {"LOWER": "for"}],
+        pattern=[{"LOWER": {"IN": ["pos", "postive", "positive", "+"]}}, {"LOWER": "for"}],
     ),
     ConTextRule(
         "positive",
         "DEFINITE_POSITIVE_EXISTENCE",
         direction="BIDIRECTIONAL",
         on_match=callbacks.disambiguate_positive,
+        allowed_types={"COVID-19", "OTHER_CORONAVIRUS"},
     ),
     ConTextRule(
         "pos status", "DEFINITE_POSITIVE_EXISTENCE", direction="BACKWARD", max_scope=3
@@ -1359,67 +1372,7 @@ context_rules = [
         pattern=[{"LOWER": {"REGEX": "consult"}}, {"LOWER": "with", "OP": "?"}],
         allowed_types={"health department"},
     ),
-    ConTextRule(
-        "test for",
-        "TEST",
-        direction="BIDIRECTIONAL",
-        allowed_types={"COVID-19", "OTHER_CORONAVIRUS"},
-        pattern=[{"LOWER": {"REGEX": "^test"}}, {"LOWER": "for", "OP": "?"}],
-    ),
-    ConTextRule(
-        "retest for",
-        "TEST",
-        direction="BIDIRECTIONAL",
-        allowed_types={"COVID-19", "OTHER_CORONAVIRUS"},
-        pattern=[{"LOWER": {"REGEX": "^retest"}}, {"LOWER": "for", "OP": "?"}],
-    ),
-    ConTextRule(
-        "check for",
-        "TEST",
-        direction="FORWARD",
-        allowed_types={"COVID-19", "OTHER_CORONAVIRUS"},
-        pattern=[{"LOWER": {"REGEX": "^check"}, "POS": "VERB"}, {"LOWER": "for"}],
-    ),
-    ConTextRule(
-        "work up",
-        "TEST",
-        pattern=[{"LOWER": "work"}, {"LOWER": "-", "OP": "?"}, {"LOWER": "up"}],
-    ),
-    ConTextRule("workup", "TEST"),
-    ConTextRule("results", "TEST", "BACKWARD", max_scope=2),
-    ConTextRule(
-        "evaluation",
-        "TEST",
-        "BIDIRECTIONAL",
-        allowed_types={"COVID-19", "OTHER_CORONAVIRUS"},
-        max_scope=2,
-    ),
-    ConTextRule(
-        "evaluated for",
-        "TEST",
-        "FORWARD",
-        allowed_types={"COVID-19", "OTHER_CORONAVIRUS"},
-        pattern=[{"LOWER": {"REGEX": "^eval"}}, {"LOWER": "for"}],
-    ),
-    ConTextRule(
-        "swab",
-        "TEST",
-        direction="BIDIRECTIONAL",
-        pattern=[{"LOWER": {"REGEX": "^swab"}}],
-        allowed_types={"COVID-19", "OTHER_CORONAVIRUS"},
-    ),
-    ConTextRule(
-        "PCR",
-        "TEST",
-        direction="BIDIRECTIONAL",
-        allowed_types={"COVID-19", "OTHER_CORONAVIRUS"},
-    ),
-    ConTextRule(
-        "specimen sent",
-        "TEST",
-        direction="BIDIRECTIONAL",
-        allowed_types={"COVID-19", "OTHER_CORONAVIRUS"},
-    ),
+    
     ConTextRule("awaiting results", "UNCERTAIN", direction="BIDIRECTIONAL"),
     ConTextRule(
         "at risk for",

@@ -1,6 +1,14 @@
 from medspacy.ner import TargetRule
 
 target_rules = {
+    "EXTERNAL_LOCATION": [
+        # This will match basic external location concepts
+        TargetRule(
+            literal="<EXTERNAL_LOCATION>",
+            category="EXTERNAL_LOCATION",
+            pattern=[{"_": {"concept_tag": "external_location"}, "OP": "+"}],
+        )
+    ],
     "COVID-19": [
         # This will match basic COVID-19 concepts
         TargetRule(
@@ -9,6 +17,23 @@ target_rules = {
             pattern=[{"_": {"concept_tag": "COVID-19"}, "OP": "+"}],
         ),
         # These will match more complex constructs
+        # COVID-19 + test mentions
+        TargetRule(
+            "<TEST> <COVID-19>",
+            "COVID-19",
+            pattern=[
+                {"_": {"concept_tag": "test"}, "OP": "+"},
+                {"IS_SPACE": True, "OP": "*"},
+                {"_": {"concept_tag": "COVID-19"}, "OP": "+"}],
+        ),
+        TargetRule(
+            "<COVID-19> <TEST>",
+            "COVID-19",
+            pattern=[
+                {"_": {"concept_tag": "COVID-19"}, "OP": "+"},
+                {"IS_SPACE": True, "OP": "*"},
+                {"_": {"concept_tag": "test"}, "OP": "+"}],
+        ),
         # "Positive COVID-19"
         TargetRule(
             literal="<POSITIVE> <COVID-19>",
@@ -80,6 +105,17 @@ target_rules = {
                 {"IS_SPACE": True, "OP": "*"},
                 {"_": {"concept_tag": "positive"}, "OP": "+"},
                 {"_": {"concept_tag": "patient"}, "OP": "+"},
+            ],
+            attributes={"is_positive": True},
+        ),
+        # "patient is positive"
+        TargetRule(
+            "<PATIENT> is positive",
+            "COVID-19",
+            pattern=[
+                {"_": {"concept_tag": "patient"}, "OP": "+"},
+                {"LOWER": "is"},
+                {"_": {"concept_tag": "positive"}, "OP": "+"},
             ],
             attributes={"is_positive": True},
         ),
@@ -169,7 +205,7 @@ target_rules = {
             "COVID-19",
             attributes={"is_positive": True},
             pattern=[
-                {"LOWER": {"IN": ["current", "recent"]}},
+                {"LOWER": {"IN": ["current", "recent", "a"]}, "OP": "?"},
                 {"_": {"concept_tag": "COVID-19"}, "OP": "+"},
                 {"LOWER": {"IN": ["dx", "dx.", "diagnosis"]}},
             ],

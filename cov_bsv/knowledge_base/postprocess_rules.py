@@ -3,16 +3,16 @@ from medspacy.postprocess import postprocessing_functions
 import re
 
 
-def has_positive_tag(ent):
-    return has_tag(ent, "positive")
-
-
 def has_tag(ent, target):
     target = target.lower()
     for token in ent:
         if token._.concept_tag.lower() == target:
             return True
     return False
+
+
+def has_positive_tag(ent):
+    return has_tag(ent, "positive")
 
 
 def has_positive(ent):

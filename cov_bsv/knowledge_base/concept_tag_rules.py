@@ -1,6 +1,79 @@
 from medspacy.ner import TargetRule
 
 concept_tag_rules = {
+    "test": [
+        TargetRule(literal="nasal swab", category="TEST",
+              pattern=[{'LOWER': "nasal"}
+                       ,{"LOWER": "swab"}]),
+        TargetRule(literal="test for", category="TEST",
+              pattern=[{"LOWER": {"REGEX": "^test"}}, {"LOWER": "for", "OP": "?"}]),
+        TargetRule(literal="retest for", category="TEST",
+              pattern=[{"LOWER": {"REGEX": "^retest"}}, {"LOWER": "for", "OP": "?"}]),
+        TargetRule(literal="check for", category="TEST",
+              pattern=[{"LOWER": {"REGEX": "^check"}, "POS": "VERB"}, {"LOWER": "for"}]),
+        TargetRule(literal="work up", category="TEST",
+              pattern=[{"LOWER": "work"}, {"LOWER": "-", "OP": "?"}, {"LOWER": "up"}]),
+        TargetRule(literal="workup", category="TEST"),
+        TargetRule(literal="results", category="TEST"),
+        TargetRule(literal="evaluation", category="TEST"),
+        TargetRule(literal="evaluated for", category="TEST",
+              pattern=[{"LOWER": {"REGEX": "^eval"}}, {"LOWER": "for"}]),
+        TargetRule(literal="swab", category="TEST"),
+        TargetRule(literal="PCR", category="TEST",
+                pattern=[
+                    {"LOWER": "pcr", "OP": "?"},
+                    {"IS_SPACE": True, "OP": "*"},
+                    {"LOWER": "lab"},
+                    {"IS_SPACE": True, "OP": "*"},
+                    {"LOWER": "test"}]),
+        TargetRule(literal="Non-PCR", category="TEST",
+                pattern=[{"LOWER":"non"},
+                    {"ORTH":"-", "OP": "?"},
+                    {"LOWER": "pcr", "OP": "?"},
+                    {"IS_SPACE": True, "OP": "*"},
+                    {"LOWER": "lab"},
+                    {"IS_SPACE": True, "OP": "*"},
+                    {"LOWER": "test"}]),
+    TargetRule(literal="specimen sent", category="TEST"),
+    ],
+    "external_location": [
+        TargetRule(
+            literal="non-VA facility",
+            category="external_location",
+            pattern=[{"LOWER":"non"}
+            ,{"ORTH":"-", "OP": "?"}
+            ,{"LOWER":"va"}
+            ,{"LOWER": {"IN":["facility","hospital","site","clinic",
+                                          "medical center", "nursing home",'lab',
+                                         "location","provider"]}}]),
+        TargetRule(literal="outside facility", category="external_location",
+              pattern=[{'LOWER': {"IN": ['outside', "community"]}}
+                       ,{"LOWER": {"IN": ["facility","hospital","site","clinic",
+                                          "medical center", "nursing home",'lab',
+                                         "location","provider"]}}]),
+    #non-VA
+    TargetRule(literal="non VA facility", category="external_location",
+              pattern=[{'LOWER': 'non'}
+                       ,{"ORTH": "-", "OP": "?"}
+                       ,{"LOWER": "va"}]),
+    #test done at a location other than this VA.
+    TargetRule(literal="a location other than this VA", category="external_location",
+              pattern=[{'LOWER': "a"}, {"IS_SPACE":True, "OP": "*"}, {'LOWER': "location"}, {"IS_SPACE":True, "OP": "*"}, {'LOWER': "other"}, {"IS_SPACE":True, "OP": "*"}, {'LOWER': "than"}, {"IS_SPACE":True, "OP": "*"}, {'LOWER': "this"}, {"IS_SPACE":True, "OP": "*"}, {'LOWER': "va"}]),
+    #COVID-19 Outside Test Results POSITIVE
+    TargetRule(literal="Outside Test Results", category="external_location",
+              pattern=[{'LOWER': 'outside'}
+                       ,{"LOWER": "test"}
+                      ,{"LOWER": "results"}]),
+    # PRIV SECTR
+    TargetRule(literal="private sector", category="external_location",
+              pattern=[{'LOWER': {"IN": ['private','priv']}}
+                       ,{'LOWER': {"IN": ['sector','sectr']}}]),
+    #community urgent care
+    TargetRule(literal="community urgent care", category="external_location",
+              pattern=[{'LOWER': {"IN": ['community','an','local']}}
+                       ,{"LOWER": "urgent"}
+                      ,{"LOWER": "care"}])
+    ],
     "coronavirus": [
         TargetRule(
             literal="coronavirus",
@@ -24,7 +97,7 @@ concept_tag_rules = {
             category="COVID-19",
             pattern=[{"LOWER": "sars"}, {"LOWER": "-", "OP": "?"}, {"LOWER": "cov-2"}],
         ),
-        TargetRule(literal="2019-cov", category="COVID-19"),
+        
         TargetRule(literal="cov2", category="COVID-19"),
         TargetRule(literal="ncov-19", category="COVID-19"),
         TargetRule(literal="novel coronavirus 2019", category="COVID-19"),
@@ -34,17 +107,28 @@ concept_tag_rules = {
         TargetRule(literal="coronavirus 19", category="COVID-19"),
         TargetRule(literal="covd-19", category="COVID-19"),
         TargetRule(literal="COVID-19", category="COVID-19"),
+        TargetRule(literal="CoV19", category="COVID-19", pattern=[{"LOWER": "cov19"}]),
+        TargetRule(literal="COVID-19 PCR Lab test", category="COVID-19", 
+                    pattern=[{"LOWER": "covid-19"},#{"ORTH": "-"},{"ORTH": "19"},
+                    {"IS_SPACE": True, "OP": "*"},
+                    {"LOWER": "pcr", "OP": "?"},
+                    {"IS_SPACE": True, "OP": "*"},
+                    {"LOWER": "lab"},
+                    {"IS_SPACE": True, "OP": "*"},
+                    {"LOWER": "test"}]
+        ),
         TargetRule(
-            literal="COVID- [\s]+19",
+            literal="COVID 19",
             category="COVID-19",
             pattern=[
-                {"LOWER": "covid-"},
-                {"IS_SPACE": True, "OP": "+"},
-                {"LOWER": {"REGEX": "19"}},
+                {"LOWER": "covid"},
+                {"IS_SPACE": True, "OP": "*"},
+                {"ORTH": "19"}
             ],
         ),
         TargetRule(literal="covd 19", category="COVID-19"),
-        TargetRule(literal="covid", category="COVID-19"),
+        TargetRule(literal="covid 19", category="COVID-19", 
+            pattern=[{"LOWER": {"REGEX": "covid\s*19"}}]),
         TargetRule(literal="SARS-CoV-2", category="COVID-19"),
         TargetRule(literal="SARS-CoV2", category="COVID-19"),
         TargetRule(literal="SARS-CoVID-2", category="COVID-19"),
@@ -62,7 +146,7 @@ concept_tag_rules = {
         TargetRule("(+)", "positive"),
         TargetRule("+ve", "positive"),
         TargetRule("+ ve", "positive"),
-        TargetRule("positive", "positive"),
+        TargetRule("positive", "positive", pattern=[{"LOWER": {"IN": ['positive','pos','postive']}}]),
         TargetRule("active", "positive"),
         TargetRule("confirmed", "positive"),
         TargetRule(
@@ -92,8 +176,8 @@ concept_tag_rules = {
                 {"LOWER": ")", "OP": "?"},
             ],
         ),
-        # Taking this for out now as it may be too imprecise
-        # TargetRule(literal="infection", category="associated_diagnosis"),
+        # may be too imprecise, but I have seen Coronavirus infection 
+         TargetRule(literal="infection", category="associated_diagnosis"),
         # TargetRule(literal="illness", category="associated_diagnosis"),
         TargetRule(
             literal="respiratory failure",
@@ -121,6 +205,7 @@ concept_tag_rules = {
             "diagnosis",
             "diagnosis",
             pattern=[
+                #{"LOWER": "a"},
                 {"LOWER": {"IN": ["diagnosis", "dx", "dx."]}},
                 {"LOWER": "of", "OP": "?"},
             ],
@@ -141,7 +226,7 @@ concept_tag_rules = {
         TargetRule(
             "patient",
             category="patient",
-            pattern=[{"LOWER": {"IN": ["patient", "pt"]}}],
+            pattern=[{"LOWER": {"IN": ["patient", "pt", "pt."]}}],
         ),
         TargetRule(
             "veteran",
@@ -323,4 +408,5 @@ concept_tag_rules = {
             pattern=[{"LOWER": "a"}, {"LOWER": {"IN": ["pt", "patient", "pt."]}}],
         ),
     ],
+    
 }
